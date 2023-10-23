@@ -2,10 +2,10 @@
 
 ## About
 This repository contains scripts to visualize the channel mapping of a single shank 128-channel EBL device from Xie-Luan labs through various hardware stages including the flex cable, ZIF connectors, Samtec connectors, and Ripple micro front ends, via a custom 128-channel adapter board. Each hardware stage section plots three figures: a plot with positional ids, a plot with previous stage ids, and a plot with electrode ids. 
-The source files directory contains initial files which were used to construct the mapping.  
+The source files directory contains initial files which were used to construct the mapping. It is recommended to look through the EBL128_map_to_Ripple.pptx file to get an overview of the mapping procedure.  
 
 ## Example
-<img src="./example%20images/probe.png" width="60%" /> <img src="./example%20images/ripple_FE.png" width="60%" />
+<img src="./example%20images/probe.png" width="70%" /> <img src="./example%20images/ripple_FE.png" width="70%" />
 
 ## Usage
 1. Clone this repository and navigate to its directory.
