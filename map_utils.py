@@ -6,7 +6,7 @@ import matplotlib.patches as patches
 import math
 
 
-def plot_probe_with_electrode_ids():
+def plot_probe_with_electrode_ids(label_ids=None):
     channel_map_df = pd.read_csv('channel_map.csv')
 
     # Replace NaN values in 'SG ch#' with a placeholder and convert the rest to integers
@@ -14,32 +14,49 @@ def plot_probe_with_electrode_ids():
         where(channel_map_df['SG ch#'].notna(), 'NaN').astype(
             str).str.split('.').str[0]
 
-    # Scatter plot
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(6, 8))
+    plt.fill_between(np.linspace(-40,40,100), 0, 2300, color='lightgray')
+    x_triangle = [-40, 40, 0]
+    y_triangle = [0, 0, -100]
+    plt.fill(x_triangle, y_triangle, color='lightgray')
     ax.scatter(channel_map_df['X, um'], channel_map_df['Y, um'],
-               color='black', s=50)  # black filled circles
+               color='C0')  
 
-    # Add text label to the left of each point
-    for i, txt in enumerate(channel_map_df['Pad #']):
-        ax.annotate(txt, (channel_map_df['X, um'].iloc[i], channel_map_df['Y, um'].iloc[i]),
-                    fontsize=6, ha='right', va='center', xytext=(-5, 0), textcoords='offset points')
+    # Add electrode id label to the left of each point
+    if label_ids is None:
+        for i, txt in enumerate(channel_map_df['Pad #']):
+            ax.annotate(txt, (channel_map_df['X, um'].iloc[i], channel_map_df['Y, um'].iloc[i]),
+                        fontsize=8, ha='right', va='center', xytext=(-5, 0), textcoords='offset points')
+    else:
+        for i, txt in enumerate(label_ids):
 
-    for i, txt in enumerate(channel_map_df['SG ch#']):
-        ax.annotate(txt, (channel_map_df['X, um'].iloc[i], channel_map_df['Y, um'].iloc[i]),
-                    fontsize=6, ha='right', va='center', xytext=(17, 0), textcoords='offset points')
-    ax.set_xlabel('X, um')
-    ax.set_ylabel('Y, um')
+            ax.annotate(txt, (channel_map_df['X, um'].iloc[i], channel_map_df['Y, um'].iloc[i]),
+                        fontsize=8, ha='right', va='center', xytext=(-5, 0), textcoords='offset points')
+            
+    # for i, txt in enumerate(channel_map_df['SG ch#']):
+    #     ax.annotate(txt, (channel_map_df['X, um'].iloc[i], channel_map_df['Y, um'].iloc[i]),
+    #                 fontsize=6, ha='right', va='center', xytext=(17, 0), textcoords='offset points')
+    plt.plot([-40, -40], [0, 3000], '-', color='C0')
+    plt.plot([40, 40], [0, 3000], '-', color='C0')
+    x1 = [-40, 0]
+    y1 = [0, -100]
+    x2 = [0, 40]
+    y2 = [-100, 0]
+    plt.plot(x1, y1, '-', color='C0')
+    plt.plot(x2, y2, '-', color='C0')
+
+    ax.set_xlabel('X (um)')
+    ax.set_ylabel('Y (um)')
     plt.tight_layout()
     plt.xlim([-100, 100])
+    plt.ylim([-150, 2100])
     plt.show()
-
 
 def map_electrode_ids_to_flex_cable_ids():
     # use SG ch# in spreadsheet to map pad # or elec id to flex cable id
-    with open('old_flex_cable_hardware_ids.json', 'r') as json_file:
-        data = json.load(json_file)
-    old_j3_ids = data['j3']
-    old_j4_ids = data['j4']
+    df = pd.read_csv('old_flex_cable_hardware_ids.csv')
+    old_j3_ids = df['j3'].tolist()
+    old_j4_ids = df['j4'].tolist()
     new_j3_ids = np.arange(72, 143)  # right
     new_j4_ids = np.arange(1, 72)
     old_flex_ids = np.concatenate([old_j4_ids, old_j3_ids])  # from 1 to 142
@@ -66,7 +83,6 @@ def map_electrode_ids_to_flex_cable_ids():
 
     return electrode_to_flex, electrode_to_sg_chs
 
-
 def sort_electrode_ids_by_flex_cable_pos(electrode_to_flex):
     flex_to_electrode = {value: key for key,
                          value in electrode_to_flex.items()}
@@ -75,17 +91,15 @@ def sort_electrode_ids_by_flex_cable_pos(electrode_to_flex):
     # Corresponding values for flex_to_electrode dict should be nan
     for key in not_connected:
         flex_to_electrode[key] = np.nan
-    sorted_flex_to_electrode = {
+    sorted_dict = {
         key: flex_to_electrode[key] for key in sorted(flex_to_electrode)}
-    sorted_electrode_ids = sorted_flex_to_electrode.values()
+    sorted_electrode_ids = sorted_dict.values()
     return sorted_electrode_ids
 
-
 def get_old_hardware_flex_cable_ids():
-    with open('old_flex_cable_hardware_ids.json', 'r') as json_file:
-        data = json.load(json_file)
-    old_j3_ids = data['j3']
-    old_j4_ids = data['j4']
+    df = pd.read_csv('old_flex_cable_hardware_ids.csv')
+    old_j3_ids = df['j3'].tolist()
+    old_j4_ids = df['j4'].tolist()
     old_flex_ids = np.concatenate([old_j4_ids, old_j3_ids])  # from 1 to 142
     old_flex_ids = [int(x) if not np.isnan(
         x) else np.nan for x in old_flex_ids]
@@ -204,20 +218,12 @@ def map_flex_cable_to_ZIF():
     flex_to_ZIF = left_flex_to_ZIF1 | right_flex_to_ZIF2
     return left_flex_to_ZIF1, right_flex_to_ZIF2, flex_to_ZIF
 
-
-def sort_electrode_ids_by_flex_cable_pos(electrode_to_flex):
-    flex_to_electrode = {value: key for key,
-                         value in electrode_to_flex.items()}
-    # Top 7 pads for each side don't map to electrode IDs
-    not_connected = [1, 2, 3, 4, 5, 6, 7, 72, 73, 74, 75, 76, 77, 78]
-    # Corresponding values for flex_to_electrode dict should be nan
-    for key in not_connected:
-        flex_to_electrode[key] = np.nan
-    sorted_dict = {
-        key: flex_to_electrode[key] for key in sorted(flex_to_electrode)}
-    sorted_electrode_ids = sorted_dict.values()
-    return sorted_electrode_ids
-
+def sort_flex_ids_by_ZIF_pos():
+    left_zif_ids, right_zif_ids, _, _, _ = create_ZIF_ids()
+    left_flex_ids = left_zif_ids[::-1]
+    right_flex_ids = list(np.array(right_zif_ids) + 71)
+    sorted_flex_ids = left_flex_ids + right_flex_ids
+    return sorted_flex_ids
 
 def sort_electrode_ids_by_ZIF_pos(electrode_to_ZIF_dict):
     ZIF_to_electrode = {value: key for key,
@@ -300,24 +306,6 @@ def create_samtec_ids():
             np.arange(mt_index * 32 + 1, (mt_index + 1) * 32 + 1))
         samtec_ids_i.extend([ref1, ref2, gnd1, gnd2])
 
-        samtec_ids.append(samtec_ids_i)
-        samtec_pos.append(generate_samtec_positions(samtec_ids_i, mt_index))
-    return samtec_ids, samtec_pos
-
-
-def create_samtec_ids():
-    samtec_ids = []
-    samtec_pos = []
-    for mt_index in range(4):
-        ref1 = 'ref1_' + str(mt_index)
-        ref2 = 'ref2_' + str(mt_index)
-        gnd1 = 'gnd1_' + str(mt_index)
-        gnd2 = 'gnd2_' + str(mt_index)
-
-        samtec_ids_i = list(
-            np.arange(mt_index * 32 + 1, (mt_index + 1) * 32 + 1))
-        samtec_ids_i.extend([ref1, ref2, gnd1, gnd2])
-
         # Directly extend the main samtec_ids and samtec_pos lists
         samtec_ids.extend(samtec_ids_i)
         samtec_pos.extend(generate_samtec_positions(samtec_ids_i, mt_index))
@@ -353,22 +341,6 @@ def generate_samtec_positions(samtec_ids, mt_index, num_rows=18):
         positions.append((col,  row))
     return positions
 
-
-def map_ZIF_to_samtec():
-    left_zif_ids, right_zif_ids, _, _, LR_str_ids = create_ZIF_ids()
-    left_flex_ids = np.concatenate([np.arange(1, 72, 2), np.arange(2, 72, 2)])
-    right_flex_ids = np.concatenate(
-        [np.arange(72, 143, 2), np.arange(73, 142, 2)])
-    left_flex_to_ZIF1 = {}
-    right_flex_to_ZIF2 = {}
-    for i, id in enumerate(left_flex_ids):
-        left_flex_to_ZIF1[id] = 'L' + str(left_zif_ids[i])
-    for i, id in enumerate(right_flex_ids):
-        right_flex_to_ZIF2[id] = 'R' + str(right_zif_ids[i])
-    flex_to_ZIF = left_flex_to_ZIF1 | right_flex_to_ZIF2
-    return left_flex_to_ZIF1, right_flex_to_ZIF2, flex_to_ZIF
-
-
 def map_ZIF_to_samtec():
     zif_to_samtec_df = pd.read_csv('ZIF_connector_to_Samtec_map.csv')
     left_zif_ids = zif_to_samtec_df['ZIF 1']
@@ -390,67 +362,35 @@ def map_ZIF_to_samtec():
     ZIF_to_samtec = ZIF1_to_samtec | ZIF2_to_samtec
     return ZIF_to_samtec
 
-
 def sort_ZIF_ids_by_samtec_pos(ZIF_to_samtec_dict):
     samtec_to_ZIF = {value: key for key,
                      value in ZIF_to_samtec_dict.items()}
-    # # Top 7 pads for each side don't map to electrode IDs
-    # _, _, _, _, desired_order = create_ZIF_ids()
-    # not_connected = ['L71', 'L70', 'L69', 'L68', 'L67', 'L66',
-    #                  'L65', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
-    # for key in not_connected:
-    #     ZIF_to_electrode[key] = np.nan
-    # # Create a new dictionary with keys in the desired order
     sorted_dict = {
-        key: samtec_to_ZIF[key] for key in sorted(samtec_to_ZIF)}
+        key: samtec_to_ZIF[key] 
+        for key in sorted(samtec_to_ZIF) 
+        if key == key and not math.isnan(float(key))
+    }
     sorted_ZIF_ids = list(sorted_dict.values())
+    insert_list = ['ref1', 'ref2', 'gnd1', 'gnd2']
+    for i in range(1, len(sorted_ZIF_ids)//32 + 1):
+        insert_index = 32 * i + 4 * (i - 1)
+        sorted_ZIF_ids[insert_index:insert_index] = insert_list
     return sorted_ZIF_ids
 
-
-def plot_samtec_ids(label_ids=None, title="Samtec Connectors Positional IDs"):
-    samtec_ids, samtec_pos = create_samtec_ids()
-    fig, ax = plt.subplots(figsize=(6, 8))
-
-    width = 4
-    height = 19
-    rect_color = 'lightgray'
-
-    ref_contacts = []
-
-    if label_ids is None:
-        label_ids = samtec_ids
-
-    for mt_id in range(4):
-        samtec_mt_pos = samtec_pos[mt_id]
-        x_coords = [coord[0]*2+mt_id*5 for coord in samtec_mt_pos]
-        y_coords = [coord[1] for coord in samtec_mt_pos]
-        ax.add_patch(patches.Rectangle(
-            (x_coords[0]-0.5, -1), width, height, color=rect_color, fill=True))
-        ax.scatter(x_coords, y_coords, color='C0')
-        ax.text(x_coords[0]+width/3, -1.5, str(mt_id+1), ha='center', va='top')
-
-        if mt_id > 0:
-            mt_id_labels = label_ids[mt_id]
-            midpoint = 28
-            mt_id_labels = mt_id_labels[:16] + \
-                mt_id_labels[16:32][::-1] + mt_id_labels[-4:]
-            for i, label in enumerate(mt_id_labels):
-                if type(label) == str:
-                    label = label.split('_')[0]
-                ax.annotate(label, (x_coords[i], y_coords[i]),
-                            fontsize=8, ha='left', va='center', xytext=(5, 0), textcoords='offset points')
-        else:
-            for i, label in enumerate(label_ids[mt_id]):
-                if type(label) == str:
-                    label = label.split('_')[0]
-                ax.annotate(label, (x_coords[i], y_coords[i]),
-                            fontsize=8, ha='left', va='center', xytext=(5, 0), textcoords='offset points')
-
-    plt.title(title)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.axis('off')
-    plt.show()
+def sort_electrode_ids_by_samtec_pos(electrode_to_samtec_dict):
+    samtec_to_electrode = {value: key for key,
+                     value in electrode_to_samtec_dict.items()}
+    sorted_dict = {
+        key: samtec_to_electrode[key] 
+        for key in sorted(samtec_to_electrode) 
+        if key == key and not math.isnan(float(key))
+    }
+    sorted_electrode_ids = list(sorted_dict.values())
+    insert_list = ['ref1', 'ref2', 'gnd1', 'gnd2']
+    for i in range(1, len(sorted_electrode_ids)//32 + 1):
+        insert_index = 32 * i + 4 * (i - 1)
+        sorted_electrode_ids[insert_index:insert_index] = insert_list
+    return sorted_electrode_ids
 
 
 def plot_samtec_ids(label_ids=None, title="Samtec Connectors Positional IDs"):
@@ -485,7 +425,126 @@ def plot_samtec_ids(label_ids=None, title="Samtec Connectors Positional IDs"):
             mt_id_labels = mt_id_labels[:16] + \
                 mt_id_labels[16:32][::-1] + mt_id_labels[-4:]
         for i, label in enumerate(mt_id_labels):
-            if type(label) == str:
+            if type(label) == str and ('ref' in label or 'gnd' in label):
+                label = label.split('_')[0]
+            ax.annotate(label, (x_coords[i], y_coords[i]),
+                        fontsize=8, ha='left', va='center', xytext=(5, 0), textcoords='offset points')
+
+    plt.title(title)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.axis('off')
+    plt.show()
+
+
+def generate_ripple_positions(ripple_ids, fe_index, num_rows=18):
+    positions = []
+    for id in ripple_ids:
+        if type(id) != str:
+            col = id % 2 
+            row = (num_rows - np.ceil(id / 2)) + fe_index * (num_rows - 2)
+      
+        else:  # if ref or gnd
+            if 'ref1' in id:
+                col = 0
+                row = 1
+            elif 'ref2' in id:
+                col = 1
+                row = 0
+            elif 'gnd1' in id:
+                col = 1
+                row = 1
+            elif 'gnd2' in id:
+                col = 0
+                row = 0
+        positions.append((col,  row))
+    return positions
+
+def create_ripple_ids():
+    ripple_ids = []
+    ripple_pos = []
+    for fe_index in range(4):
+        ref1, ref2, gnd1, gnd2 = [f'{name}_{fe_index}' for name in 
+                                  ['ref1', 'ref2', 'gnd1', 'gnd2']]
+        ripple_ids_i = list(
+            np.arange(fe_index * 32 + 1, (fe_index + 1) * 32 + 1))
+        ripple_ids_i.extend([ref1, ref2, gnd1, gnd2])
+
+        # Directly extend the main samtec_ids and samtec_pos lists
+        ripple_ids.extend(ripple_ids_i)
+        ripple_pos.extend(generate_ripple_positions(ripple_ids_i, fe_index))
+    return ripple_ids, ripple_pos    
+
+def map_samtec_to_ripple():
+    df = pd.read_csv('Samtec_connector_to_Ripple_map.csv')
+    samtec_ids = df['Samtec'].tolist()
+    ripple_ids = df['Ripple'].tolist()
+    samtec_to_ripple = {samtec_ids[i]: ripple_ids[i] for i in range(len(samtec_ids))}
+    return samtec_to_ripple
+
+def sort_samtec_ids_by_ripple_pos(samtec_to_ripple_dict):
+    ripple_to_samtec = {value: key for key,
+                     value in samtec_to_ripple_dict.items()}
+    sorted_dict = {
+        key: ripple_to_samtec[key] 
+        for key in sorted(ripple_to_samtec) 
+        if key == key and not math.isnan(float(key))
+    }
+    sorted_samtec_ids = list(sorted_dict.values())
+    insert_list = ['ref1', 'ref2', 'gnd1', 'gnd2']
+    for i in range(1, len(sorted_samtec_ids)//32 + 1):
+        insert_index = 32 * i + 4 * (i - 1)
+        sorted_samtec_ids[insert_index:insert_index] = insert_list
+    return sorted_samtec_ids
+
+def sort_electrode_ids_by_ripple_pos(electrode_to_ripple_dict):
+    ripple_to_electrode = {value: key for key,
+                        value in electrode_to_ripple_dict.items()}
+    sorted_dict = {
+        key: ripple_to_electrode[key] 
+        for key in sorted(ripple_to_electrode) 
+        if key == key and not math.isnan(float(key))
+    }
+    sorted_ripple_ids = list(sorted_dict.values())
+    insert_list = ['ref1', 'ref2', 'gnd1', 'gnd2']
+    for i in range(1, len(sorted_ripple_ids)//32 + 1):
+        insert_index = 32 * i + 4 * (i - 1)
+        sorted_ripple_ids[insert_index:insert_index] = insert_list
+    return sorted_ripple_ids
+    
+def plot_ripple_ids(label_ids=None, title="Ripple FE Positional IDs"):
+    ripple_ids, ripple_pos = create_ripple_ids()
+    fig, ax = plt.subplots(figsize=(6, 8))
+
+    width = 4
+    height = 19
+    rect_color = 'lightgray'
+
+    if label_ids is None:
+        label_ids = ripple_ids
+
+    n = len(ripple_ids) // 4  # Number of ids per connector
+
+    for fe_id in range(4):
+        start_idx = fe_id * n
+        end_idx = (fe_id + 1) * n
+
+        x_coords = [coord[0]*2 + fe_id *
+                    5 for coord in ripple_pos[start_idx:end_idx]] 
+        y_coords = [coord[1] for coord in ripple_pos[start_idx:end_idx]]
+
+        ax.add_patch(patches.Rectangle(
+            (x_coords[1]-0.5, -1), width, height, color=rect_color, fill=True))
+        ax.scatter(x_coords, y_coords, color='C0')
+        ax.text(x_coords[1]+width/3, -1.5, str(fe_id+1), ha='center', va='top')
+
+        fe_id_labels = label_ids[start_idx:end_idx]
+        # if fe_id > 0:
+        #     midpoint = 28
+        #     fe_id_labels = fe_id_labels[:16] + \
+        #         fe_id_labels[16:32][::-1] + fe_id_labels[-4:]
+        for i, label in enumerate(fe_id_labels):
+            if type(label) == str and ('ref' in label or 'gnd' in label):
                 label = label.split('_')[0]
             ax.annotate(label, (x_coords[i], y_coords[i]),
                         fontsize=8, ha='left', va='center', xytext=(5, 0), textcoords='offset points')
@@ -498,7 +557,7 @@ def plot_samtec_ids(label_ids=None, title="Samtec Connectors Positional IDs"):
 
 
 if __name__ == '__main__':
-    # plot_probe_with_electrode_ids()
+    plot_probe_with_electrode_ids()
 
     # plot_flex_cable_ids()
 
@@ -517,22 +576,45 @@ if __name__ == '__main__':
     # # map_electrode_ids_to_zif_ids
     electrode_to_flex, electrode_to_sg_chs = map_electrode_ids_to_flex_cable_ids()
     left_flex_to_ZIF1, right_flex_to_ZIF2, flex_to_ZIF = map_flex_cable_to_ZIF()
+    ZIF_to_samtec = map_ZIF_to_samtec()
+    
     electrode_to_ZIF = {
         key: flex_to_ZIF[electrode_to_flex[key]] for key in electrode_to_flex}
-
+    
+    electrode_to_samtec = {
+        key: ZIF_to_samtec[flex_to_ZIF[electrode_to_flex[key]]] for key in electrode_to_flex}
+        
     # sorted_electrode_ids_by_ZIF = sort_electrode_ids_by_ZIF_pos(
     #     electrode_to_ZIF)
 
-    # sort electrode ids by zif pos
 
     # sorted_electrode_ids_by_ZIF = sort_electrode_ids_by_ZIF_pos(
     #     electrode_to_ZIF)
-    # plot_ZIF_ids()
+    # sorted_new_flex_ids = sort_flex_ids_by_ZIF_pos()
+    # plot_ZIF_ids(label_ids=sorted_new_flex_ids,
+    #               title="ZIF Connectors with Flex Cable IDs")
+    # # plot_ZIF_ids()
     # plot_ZIF_ids(label_ids=sorted_electrode_ids_by_ZIF,
-    #              title="ZIF Connectors Electrode IDs")
+    #               title="ZIF Connectors with Electrode IDs")
 
     # plot_samtec_ids()
-
-    ZIF_to_samtec = map_ZIF_to_samtec()
-    sorted_ZIF_ids_by_samtec = sort_ZIF_ids_by_samtec_pos(ZIF_to_samtec)
-    plot_samtec_ids(label_ids=sorted_ZIF_ids_by_samtec)
+    # sorted_ZIF_ids_by_samtec = sort_ZIF_ids_by_samtec_pos(ZIF_to_samtec)
+    # plot_samtec_ids(label_ids=sorted_ZIF_ids_by_samtec, title="Samtec Connectors with ZIF IDs")
+    
+    sorted_electrode_ids_by_samtec = sort_electrode_ids_by_samtec_pos(electrode_to_samtec)
+    # plot_samtec_ids(label_ids=sorted_electrode_ids_by_samtec, title="Samtec Connectors with Electrode IDs")
+    
+    # plot_ripple_ids()
+    samtec_to_ripple = map_samtec_to_ripple()
+    sorted_samtec_ids_by_ripple = sort_samtec_ids_by_ripple_pos(samtec_to_ripple)
+    # plot_ripple_ids(label_ids=sorted_samtec_ids_by_ripple, title="Ripple Front Ends with Samtec IDs")
+    
+    electrode_to_ripple = {
+        key: samtec_to_ripple[ZIF_to_samtec[flex_to_ZIF[electrode_to_flex[key]]]] for key in electrode_to_flex}
+    
+    sorted_electrode_ids_by_ripple = sort_electrode_ids_by_ripple_pos(electrode_to_ripple)
+    # plot_ripple_ids(label_ids=sorted_electrode_ids_by_ripple, title="Ripple Front Ends with Electrode IDs")
+    
+    dict_vals = list(electrode_to_ripple.values())
+    dict_vals.insert(65,'nan')
+    plot_probe_with_electrode_ids(dict_vals)
