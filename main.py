@@ -3,18 +3,19 @@ from probeinterface import read_probeinterface
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from map_utils import *
+from util import map_utils
 
 # %% Plot probe with electrode ids
 # Electrode 66 isn't used
-plot_probe_with_electrode_ids()
+map_utils.plot_probe_with_electrode_ids()
 
 # %% Plot flex cable with ids
-plot_flex_cable_ids()
-electrode_to_flex, electrode_to_sg_chs = map_electrode_ids_to_flex_cable_ids()
-sorted_flex_ids = sort_electrode_ids_by_flex_cable_pos(electrode_to_flex)
-plot_flex_cable_ids(label_ids=sorted_flex_ids,
-                    title="Flex Cable with Electrode IDs")
+map_utils.plot_flex_cable_ids()
+electrode_to_flex, electrode_to_sg_chs = map_utils.map_electrode_ids_to_flex_cable_ids()
+sorted_flex_ids = map_utils.sort_electrode_ids_by_flex_cable_pos(
+    electrode_to_flex)
+map_utils.plot_flex_cable_ids(label_ids=sorted_flex_ids,
+                              title="Flex Cable with Electrode IDs")
 
 # %% Plot ZIF connectors with ids
 ''' 
@@ -24,64 +25,65 @@ Each hardware stage section plots three figures:
     3. Plot with electrode ids
 '''
 # 1
-plot_ZIF_ids()
+map_utils.plot_ZIF_ids()
 
 # 2
-sorted_flex_ids_by_ZIF = sort_flex_ids_by_ZIF_pos()
-plot_ZIF_ids(label_ids=sorted_flex_ids_by_ZIF,
-             title="ZIF Connectors with Flex Cable IDs")
+sorted_flex_ids_by_ZIF = map_utils.sort_flex_ids_by_ZIF_pos()
+map_utils.plot_ZIF_ids(label_ids=sorted_flex_ids_by_ZIF,
+                       title="ZIF Connectors with Flex Cable IDs")
 
 # 3 (construct dictionary that maps electrode ID to this hardware stage ids)
-_, _, flex_to_ZIF = map_flex_cable_to_ZIF()
+_, _, flex_to_ZIF = map_utils.map_flex_cable_to_ZIF()
 electrode_to_ZIF = {
     key: flex_to_ZIF[electrode_to_flex[key]] for key in electrode_to_flex}
-sorted_electrode_ids_by_ZIF = sort_electrode_ids_by_ZIF_pos(
+sorted_electrode_ids_by_ZIF = map_utils.sort_electrode_ids_by_ZIF_pos(
     electrode_to_ZIF)
-plot_ZIF_ids(label_ids=sorted_electrode_ids_by_ZIF,
-             title="ZIF Connectors with Electrode IDs")
+map_utils.plot_ZIF_ids(label_ids=sorted_electrode_ids_by_ZIF,
+                       title="ZIF Connectors with Electrode IDs")
 
 
 # %% Plot samtec connectors with ids
 
 # L corresponds to left ZIF or zif1
 # R corresponds to right ZIF or zif2
-plot_samtec_ids()
+map_utils.plot_samtec_ids()
 
-ZIF_to_samtec = map_ZIF_to_samtec()
-sorted_ZIF_ids_by_samtec = sort_ZIF_ids_by_samtec_pos(ZIF_to_samtec)
-plot_samtec_ids(label_ids=sorted_ZIF_ids_by_samtec,
-                title="Samtec Connectors with ZIF IDs")
+ZIF_to_samtec = map_utils.map_ZIF_to_samtec()
+sorted_ZIF_ids_by_samtec = map_utils.sort_ZIF_ids_by_samtec_pos(ZIF_to_samtec)
+map_utils.plot_samtec_ids(label_ids=sorted_ZIF_ids_by_samtec,
+                          title="Samtec Connectors with ZIF IDs")
 
 electrode_to_samtec = {
     key: ZIF_to_samtec[flex_to_ZIF[electrode_to_flex[key]]] for key in electrode_to_flex}
-sorted_electrode_ids_by_samtec = sort_electrode_ids_by_samtec_pos(
+sorted_electrode_ids_by_samtec = map_utils.sort_electrode_ids_by_samtec_pos(
     electrode_to_samtec)
-plot_samtec_ids(label_ids=sorted_electrode_ids_by_samtec,
-                title="Samtec Connectors with Electrode IDs")
+map_utils.plot_samtec_ids(label_ids=sorted_electrode_ids_by_samtec,
+                          title="Samtec Connectors with Electrode IDs")
 
 # %% Plot Ripple front ends with ids
 
 # Ripple FE ids 1-4 from left to right
 # ST3 on design file corresponds to FE1 and ST2 to FE4
-plot_ripple_ids(title='Ripple FE Positional and Channel IDs')
+map_utils.plot_ripple_ids(title='Ripple FE Positional and Channel IDs')
 
-samtec_to_ripple = map_samtec_to_ripple()
-sorted_samtec_ids_by_ripple = sort_samtec_ids_by_ripple_pos(samtec_to_ripple)
-plot_ripple_ids(label_ids=sorted_samtec_ids_by_ripple,
-                title="Ripple Front Ends with Samtec IDs")
+samtec_to_ripple = map_utils.map_samtec_to_ripple()
+sorted_samtec_ids_by_ripple = map_utils.sort_samtec_ids_by_ripple_pos(
+    samtec_to_ripple)
+map_utils.plot_ripple_ids(label_ids=sorted_samtec_ids_by_ripple,
+                          title="Ripple Front Ends with Samtec IDs")
 
 electrode_to_ripple = {
     key: samtec_to_ripple[ZIF_to_samtec[flex_to_ZIF[electrode_to_flex[key]]]] for key in electrode_to_flex}
-sorted_electrode_ids_by_ripple = sort_electrode_ids_by_ripple_pos(
+sorted_electrode_ids_by_ripple = map_utils.sort_electrode_ids_by_ripple_pos(
     electrode_to_ripple)
-plot_ripple_ids(label_ids=sorted_electrode_ids_by_ripple,
-                title="Ripple Front Ends with Electrode IDs")
+map_utils.plot_ripple_ids(label_ids=sorted_electrode_ids_by_ripple,
+                          title="Ripple Front Ends with Electrode IDs")
 
 # %% Plot probe with Ripple channels
 
 dict_vals = list(electrode_to_ripple.values())
 dict_vals.insert(65, 'nan')
-plot_probe_with_electrode_ids(dict_vals)
+map_utils.plot_probe_with_electrode_ids(dict_vals)
 
 # %% Map functions
 ripple_to_electrode = {value: key for key,

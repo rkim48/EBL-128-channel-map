@@ -1,9 +1,12 @@
 import numpy as np
-import json
 import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib.patches as patches
 import math
+from pathlib import Path
+
+# Get the directory of the current module/scrip
+dir_path = Path(__file__).parent
 
 
 def plot_probe_with_electrode_ids(label_ids=None):
@@ -12,9 +15,10 @@ def plot_probe_with_electrode_ids(label_ids=None):
     contact_color = "orange"
     contact_size = 80
     fontsize = 7
-    channel_map_df = pd.read_csv('channel_map.csv')
+    channel_map_df = pd.read_csv(dir_path / 'channel_map.csv')
 
-    # Replace NaN values in 'SG ch#' with a placeholder and convert the rest to integers
+    # Replace NaN values in 'SG ch#' with a placeholder
+    # and convert the rest to integers
     channel_map_df['SG ch#'] = channel_map_df['SG ch#'].\
         where(channel_map_df['SG ch#'].notna(), 'NaN').astype(
             str).str.split('.').str[0]
@@ -55,14 +59,14 @@ def plot_probe_with_electrode_ids(label_ids=None):
 
 def map_electrode_ids_to_flex_cable_ids():
     # use SG ch# in spreadsheet to map pad # or elec id to flex cable id
-    df = pd.read_csv('old_flex_cable_hardware_ids.csv')
+    df = pd.read_csv(dir_path / 'old_flex_cable_hardware_ids.csv')
     old_j3_ids = df['j3'].tolist()
     old_j4_ids = df['j4'].tolist()
     new_j3_ids = np.arange(72, 143)  # right
     new_j4_ids = np.arange(1, 72)
     old_flex_ids = np.concatenate([old_j4_ids, old_j3_ids])  # from 1 to 142
     new_flex_ids = np.concatenate([new_j4_ids, new_j3_ids])  # from 1 to 142
-    channel_map_df = pd.read_csv('channel_map.csv')
+    channel_map_df = pd.read_csv(dir_path / 'channel_map.csv')
     channel_map_df['SG ch#'].replace('', np.nan, inplace=True)
     sg_chs = [int(value) if not np.isnan(value) else -
               1 for value in channel_map_df['SG ch#']]
@@ -100,7 +104,7 @@ def sort_electrode_ids_by_flex_cable_pos(electrode_to_flex):
 
 
 def get_old_hardware_flex_cable_ids():
-    df = pd.read_csv('old_flex_cable_hardware_ids.csv')
+    df = pd.read_csv(dir_path / 'old_flex_cable_hardware_ids.csv')
     old_j3_ids = df['j3'].tolist()
     old_j4_ids = df['j4'].tolist()
     old_flex_ids = np.concatenate([old_j4_ids, old_j3_ids])  # from 1 to 142
@@ -348,7 +352,8 @@ def generate_samtec_positions(samtec_ids, mt_index, num_rows=18):
 
 
 def map_ZIF_to_samtec():
-    zif_to_samtec_df = pd.read_csv('ZIF_connector_to_Samtec_map.csv')
+    zif_to_samtec_df = pd.read_csv(
+        dir_path / 'ZIF_connector_to_Samtec_map.csv')
     left_zif_ids = zif_to_samtec_df['ZIF 1']
     right_zif_ids = zif_to_samtec_df['ZIF 2']
     from_left_zif = zif_to_samtec_df['Samtec 1']
@@ -486,7 +491,7 @@ def create_ripple_ids():
 
 
 def map_samtec_to_ripple():
-    df = pd.read_csv('Samtec_connector_to_Ripple_map.csv')
+    df = pd.read_csv(dir_path / 'Samtec_connector_to_Ripple_map.csv')
     samtec_ids = df['Samtec'].tolist()
     ripple_ids = df['Ripple'].tolist()
     samtec_to_ripple = {samtec_ids[i]: ripple_ids[i]
